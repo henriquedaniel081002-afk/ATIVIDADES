@@ -11,7 +11,6 @@ interface FilterBarProps {
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, sort, setSort, activities }) => {
-  
   // Extract unique dates from activities, sort descending, and format for display
   const availableDates = useMemo(() => {
     const dates = activities.map(a => a.date).filter(Boolean);
@@ -44,12 +43,14 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, sort, setSor
 
   const getSortIcon = (field: SortField) => {
     if (sort.field !== field) return null;
-    return sort.direction === 'asc' ? <ArrowUp size={14} className="ml-1" /> : <ArrowDown size={14} className="ml-1" />;
+    return sort.direction === 'asc'
+      ? <ArrowUp size={14} className="ml-1" />
+      : <ArrowDown size={14} className="ml-1" />;
   };
 
   return (
     <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm space-y-4 lg:space-y-0 lg:flex lg:items-end lg:justify-between lg:gap-4 mb-6">
-      
+
       {/* Date Smart Filter */}
       <div className="flex-1 min-w-[200px]">
         <label className="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2 flex items-center gap-1">
@@ -57,7 +58,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, sort, setSor
           Filtrar por Data
         </label>
         <div className="relative">
-          <select 
+          <select
             value={filters.date}
             onChange={(e) => setFilters(prev => ({ ...prev, date: e.target.value }))}
             disabled={availableDates.length === 0}
@@ -102,16 +103,51 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, setFilters, sort, setSor
         </div>
       </div>
 
+      {/* Status Filter (NOVO) */}
+      <div className="flex-1 min-w-[200px]">
+        <label className="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2">
+          Status
+        </label>
+        <div className="relative">
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as FilterState['status'] }))}
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none appearance-none cursor-pointer transition-colors hover:border-gray-500"
+          >
+            <option value="Todos">Tudo</option>
+            <option value="Pendente">Somente pendentes</option>
+            <option value="Concluído">Somente concluídas</option>
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
+            <ArrowDown size={14} />
+          </div>
+        </div>
+      </div>
+
       {/* Mobile Sort Options */}
       <div className="lg:hidden flex-1">
-         <label className="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2">
+        <label className="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2">
           Ordenar Por
         </label>
         <div className="flex gap-2">
-          <button onClick={() => handleSort('date')} className={`flex items-center px-3 py-2 rounded-lg text-sm border ${sort.field === 'date' ? 'border-blue-500 text-blue-400 bg-blue-900/10' : 'border-gray-600 text-gray-400'}`}>
+          <button
+            onClick={() => handleSort('date')}
+            className={`flex items-center px-3 py-2 rounded-lg text-sm border ${
+              sort.field === 'date'
+                ? 'border-blue-500 text-blue-400 bg-blue-900/10'
+                : 'border-gray-600 text-gray-400'
+            }`}
+          >
             Data {getSortIcon('date')}
           </button>
-           <button onClick={() => handleSort('priority')} className={`flex items-center px-3 py-2 rounded-lg text-sm border ${sort.field === 'priority' ? 'border-blue-500 text-blue-400 bg-blue-900/10' : 'border-gray-600 text-gray-400'}`}>
+          <button
+            onClick={() => handleSort('priority')}
+            className={`flex items-center px-3 py-2 rounded-lg text-sm border ${
+              sort.field === 'priority'
+                ? 'border-blue-500 text-blue-400 bg-blue-900/10'
+                : 'border-gray-600 text-gray-400'
+            }`}
+          >
             Prioridade {getSortIcon('priority')}
           </button>
         </div>
