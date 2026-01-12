@@ -28,11 +28,13 @@ const App: React.FC = () => {
   const handleSaveActivity = (data: Omit<Activity, 'id' | 'createdAt'>) => {
     if (editingActivity) {
       // Update existing
-      setActivities(prev => prev.map(act => 
-        act.id === editingActivity.id 
-          ? { ...act, ...data } 
-          : act
-      ));
+      setActivities(prev =>
+        prev.map(act =>
+          act.id === editingActivity.id
+            ? { ...act, ...data }
+            : act
+        )
+      );
     } else {
       // Create new
       const newActivity: Activity = {
@@ -46,17 +48,19 @@ const App: React.FC = () => {
   };
 
   const handleToggleStatus = (id: string) => {
-    setActivities(prev => prev.map(act => {
-      if (act.id === id) {
-        const isCompleted = act.status === 'Concluído';
-        return {
-          ...act,
-          status: isCompleted ? 'Pendente' : 'Concluído',
-          completionDate: isCompleted ? undefined : new Date().toISOString().split('T')[0]
-        };
-      }
-      return act;
-    }));
+    setActivities(prev =>
+      prev.map(act => {
+        if (act.id === id) {
+          const isCompleted = act.status === 'Concluído';
+          return {
+            ...act,
+            status: isCompleted ? 'Pendente' : 'Concluído',
+            completionDate: isCompleted ? undefined : new Date().toISOString().split('T')[0]
+          };
+        }
+        return act;
+      })
+    );
   };
 
   const handleDeleteActivity = (id: string) => {
@@ -74,28 +78,28 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // --- Derived State (Filter & Sort) ---
+  // --- Helpers (filter + sort) ---
 
-  const processedActivities = useMemo(() => {
-    let result = [...activities];
+  const applyFilters = (list: Activity[]) => {
+    let result = [...list];
 
-    // 1. Filtering
     if (filters.date) {
       result = result.filter(a => a.date === filters.date);
     }
-    
+
     if (filters.priorities.length > 0) {
       result = result.filter(a => filters.priorities.includes(a.priority));
     }
-    // (Optional status filter currently hardcoded to 'Todos' in initial state, but logic is here)
-    if (filters.status !== 'Todos') {
-      result = result.filter(a => a.status === filters.status);
-    }
 
-    // 2. Sorting
+    return result;
+  };
+
+  const applySort = (list: Activity[]) => {
+    const result = [...list];
+
     result.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sort.field) {
         case 'date':
           comparison = a.date.localeCompare(b.date);
@@ -104,7 +108,6 @@ const App: React.FC = () => {
           comparison = PRIORITY_WEIGHTS[a.priority] - PRIORITY_WEIGHTS[b.priority];
           break;
         case 'status':
-          // 'Pendente' comes before 'Concluído' usually, or alphabetical
           comparison = a.status.localeCompare(b.status);
           break;
       }
@@ -113,15 +116,29 @@ const App: React.FC = () => {
     });
 
     return result;
+  };
+
+  // --- Derived State: two tables ---
+
+  const pendingActivities = useMemo(() => {
+    const base = activities.filter(a => a.status === 'Pendente');
+    return applySort(applyFilters(base));
+  }, [activities, filters, sort]);
+
+  const doneActivities = useMemo(() => {
+    const base = activities.filter(a => a.status === 'Concluído');
+    return applySort(applyFilters(base));
   }, [activities, filters, sort]);
 
   // --- Stats ---
   const pendingCount = activities.filter(a => a.status === 'Pendente').length;
   const doneCount = activities.filter(a => a.status === 'Concluído').length;
 
+  const showPending = filters.status === 'Todos' || filters.status === 'Pendente';
+  const showDone = filters.status === 'Todos' || filters.status === 'Concluído';
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans selection:bg-blue-500/30">
-      
       {/* Navbar */}
       <nav className="border-b border-gray-800 bg-gray-900/80 backdrop-blur sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -133,16 +150,16 @@ const App: React.FC = () => {
               <h1 className="text-xl font-bold tracking-tight text-white">DailyTasker</h1>
             </div>
             <div className="flex gap-4 text-sm font-medium">
-               <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800 border border-gray-700">
-                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                  <span className="text-gray-400">Pendentes:</span>
-                  <span className="text-white">{pendingCount}</span>
-               </div>
-               <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800 border border-gray-700">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span className="text-gray-400">Concluídas:</span>
-                  <span className="text-white">{doneCount}</span>
-               </div>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800 border border-gray-700">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span className="text-gray-400">Pendentes:</span>
+                <span className="text-white">{pendingCount}</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800 border border-gray-700">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                <span className="text-gray-400">Concluídas:</span>
+                <span className="text-white">{doneCount}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -150,15 +167,14 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
         {/* Header Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-             <h2 className="text-2xl font-bold text-white">Minhas Atividades</h2>
-             <p className="text-gray-400 mt-1">Gerencie suas tarefas e acompanhe seu progresso.</p>
+            <h2 className="text-2xl font-bold text-white">Minhas Atividades</h2>
+            <p className="text-gray-400 mt-1">Gerencie suas tarefas e acompanhe seu progresso.</p>
           </div>
-          
-          <button 
+
+          <button
             onClick={openCreateModal}
             className="group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95"
           >
@@ -168,28 +184,71 @@ const App: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <FilterBar 
-          filters={filters} 
-          setFilters={setFilters} 
+        <FilterBar
+          filters={filters}
+          setFilters={setFilters}
           sort={sort}
           setSort={setSort}
           activities={activities}
         />
 
-        {/* List */}
-        <ActivityList 
-          activities={processedActivities}
-          onToggleStatus={handleToggleStatus}
-          onEdit={openEditModal}
-          onDelete={handleDeleteActivity}
-          sort={sort}
-          onSort={(f) => setSort(prev => ({ field: f, direction: prev.field === f && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-        />
+        {/* Pending table */}
+        {showPending && (
+          <section className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                Pendentes
+              </h3>
+              <span className="text-sm text-gray-400">{pendingActivities.length}</span>
+            </div>
 
+            <ActivityList
+              activities={pendingActivities}
+              onToggleStatus={handleToggleStatus}
+              onEdit={openEditModal}
+              onDelete={handleDeleteActivity}
+              sort={sort}
+              onSort={(f) =>
+                setSort(prev => ({
+                  field: f,
+                  direction: prev.field === f && prev.direction === 'asc' ? 'desc' : 'asc'
+                }))
+              }
+            />
+          </section>
+        )}
+
+        {/* Done table */}
+        {showDone && (
+          <section className="mt-10">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                Concluídas
+              </h3>
+              <span className="text-sm text-gray-400">{doneActivities.length}</span>
+            </div>
+
+            <ActivityList
+              activities={doneActivities}
+              onToggleStatus={handleToggleStatus}
+              onEdit={openEditModal}
+              onDelete={handleDeleteActivity}
+              sort={sort}
+              onSort={(f) =>
+                setSort(prev => ({
+                  field: f,
+                  direction: prev.field === f && prev.direction === 'asc' ? 'desc' : 'asc'
+                }))
+              }
+            />
+          </section>
+        )}
       </main>
 
-      <ActivityModal 
-        isOpen={isModalOpen} 
+      <ActivityModal
+        isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveActivity}
         editingActivity={editingActivity}
